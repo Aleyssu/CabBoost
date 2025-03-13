@@ -172,3 +172,4 @@ cython_debug/
 
 /data
 /tripdata_combined.parquet
+/taxi_zones
