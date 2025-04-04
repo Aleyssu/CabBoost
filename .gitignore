@@ -172,3 +172,5 @@ cython_debug/
 
 /data
 /tripdata_combined.parquet
+
+/yellow_tripdata
