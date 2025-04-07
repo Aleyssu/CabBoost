@@ -211,7 +211,7 @@ def build_regression_model(df, region_id, max_samples=50000):
     plt.xlabel('Actual Profit')
     plt.ylabel('Predicted Profit')
     plt.title(f'Actual vs Predicted Profit for Region {region_id}')
-    plt.savefig(f'region_{region_id}_predictions.png', dpi=200, bbox_inches='tight')
+    plt.savefig(f'images/region_{region_id}_predictions.png', dpi=200, bbox_inches='tight')
     plt.close()
     
     # Try to get feature importances (simplified to avoid memory issues)
@@ -235,7 +235,7 @@ def build_regression_model(df, region_id, max_samples=50000):
         plt.title(f'Top 10 Feature Importances for Region {region_id}')
         plt.xlabel('Importance')
         plt.tight_layout()
-        plt.savefig(f'region_{region_id}_feature_importance.png', dpi=200, bbox_inches='tight')
+        plt.savefig(f'images/region_{region_id}_feature_importance.png', dpi=200, bbox_inches='tight')
         plt.close()
     except Exception as e:
         print(f"Warning: Could not plot feature importances. Error: {e}")
@@ -389,7 +389,7 @@ def plot_hourly_patterns(df, region_id):
     plt.grid(True, alpha=0.3)
     plt.legend(title='Trip Length')
     plt.tight_layout()
-    plt.savefig(f'hourly_profit_region_{region_id}.png', dpi=200, bbox_inches='tight')
+    plt.savefig(f'images/hourly_profit_region_{region_id}.png', dpi=200, bbox_inches='tight')
     plt.close()
     
     return hourly_profit
@@ -414,7 +414,7 @@ def plot_weekly_patterns(df, region_id):
     plt.grid(True, alpha=0.3)
     plt.legend(title='Trip Length')
     plt.tight_layout()
-    plt.savefig(f'weekly_profit_region_{region_id}.png', dpi=200, bbox_inches='tight')
+    plt.savefig(f'images/weekly_profit_region_{region_id}.png', dpi=200, bbox_inches='tight')
     plt.close()
     
     return dow_profit
@@ -445,7 +445,7 @@ def plot_profitability_analysis(profit_analysis, region_id):
                  ha='center', va='bottom', fontsize=12)
     
     plt.tight_layout()
-    plt.savefig(f'profitability_region_{region_id}.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'images/profitability_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
 
 def plot_seasonal_effects(seasonal_profit, region_id):
@@ -461,7 +461,7 @@ def plot_seasonal_effects(seasonal_profit, region_id):
     plt.xlabel('Trip Length Category', fontsize=14)
     plt.ylabel('Season', fontsize=14)
     plt.tight_layout()
-    plt.savefig(f'seasonal_effects_region_{region_id}.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'images/seasonal_effects_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
 
 def plot_time_effects(time_profit, region_id):
@@ -477,7 +477,7 @@ def plot_time_effects(time_profit, region_id):
     plt.xlabel('Trip Length Category', fontsize=14)
     plt.ylabel('Time of Day', fontsize=14)
     plt.tight_layout()
-    plt.savefig(f'time_effects_region_{region_id}.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'images/time_effects_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
 
 def print_recommendation(profit_analysis, region_id, metrics):
@@ -607,7 +607,7 @@ def analyze_od_pairs(df, region_id, top_n=5):
                 ha='center', va='bottom', fontsize=10)
     
     plt.tight_layout()
-    plt.savefig(f'od_profitability_region_{region_id}.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'images/od_profitability_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     return od_df
@@ -653,7 +653,7 @@ def analyze_payment_types(df, region_id):
     plt.title(f'Payment Type Distribution (Region {region_id})', fontsize=16)
     plt.ylabel('')  # Hide the 'None' ylabel
     plt.tight_layout()
-    plt.savefig(f'payment_distribution_region_{region_id}.png', dpi=200, bbox_inches='tight')
+    plt.savefig(f'images/payment_distribution_region_{region_id}.png', dpi=200, bbox_inches='tight')
     plt.close()
     
     # Plot 2: Average profit by payment type and trip length
@@ -669,7 +669,7 @@ def analyze_payment_types(df, region_id):
     plt.xlabel('Trip Length Category', fontsize=14)
     plt.ylabel('Payment Type', fontsize=14)
     plt.tight_layout()
-    plt.savefig(f'payment_profit_region_{region_id}.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'images/payment_profit_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     # Plot 3: Average tip by payment type and trip length (only if relevant)
@@ -685,7 +685,7 @@ def analyze_payment_types(df, region_id):
     plt.xlabel('Trip Length Category', fontsize=14)
     plt.ylabel('Payment Type', fontsize=14)
     plt.tight_layout()
-    plt.savefig(f'payment_tip_region_{region_id}.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'images/payment_tip_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     return payment_profit
@@ -845,7 +845,7 @@ def build_optimized_model(df, region_id, max_samples=50000):
         plt.title(f'Top 15 Feature Importances (Optimized Model, Region {region_id})', fontsize=16)
         plt.xlabel('Importance', fontsize=14)
         plt.tight_layout()
-        plt.savefig(f'optimized_feature_importance_region_{region_id}.png', dpi=300, bbox_inches='tight')
+        plt.savefig(f'images/optimized_feature_importance_region_{region_id}.png', dpi=300, bbox_inches='tight')
         plt.close()
     except Exception as e:
         print(f"Warning: Could not plot feature importances. Error: {e}")
@@ -992,7 +992,7 @@ def perform_clustering_analysis(df, region_id, n_clusters=4):
     plt.title(f'Cluster Characteristics Comparison (Region {region_id})', fontsize=16)
     
     plt.tight_layout()
-    plt.savefig(f'cluster_analysis_region_{region_id}.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'images/cluster_analysis_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     # Create a profitability vs distance scatter plot by cluster
@@ -1011,7 +1011,7 @@ def perform_clustering_analysis(df, region_id, n_clusters=4):
     plt.ylabel('Total Profit ($)', fontsize=14)
     plt.legend(title='Cluster', title_fontsize=12)
     plt.tight_layout()
-    plt.savefig(f'cluster_profitability_region_{region_id}.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'images/cluster_profitability_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     # Create a summary table
@@ -1267,7 +1267,7 @@ def generate_summary_report(results, top_regions):
                 ha='center', va='bottom', fontsize=10)
     
     plt.tight_layout()
-    plt.savefig('region_comparison_summary.png', dpi=300, bbox_inches='tight')
+    plt.savefig('images/region_comparison_summary.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     # Plot model performance comparison
@@ -1303,7 +1303,7 @@ def generate_summary_report(results, top_regions):
     ax.legend()
     
     plt.tight_layout()
-    plt.savefig('model_performance_comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig('images/model_performance_comparison.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     print("Summary report generated and saved!")
@@ -1351,7 +1351,7 @@ def generate_timing_summary_report(results, top_regions):
         
         plt.title('Optimal Hour by Trip Length and Region', fontsize=16)
         plt.tight_layout()
-        plt.savefig('optimal_hour_summary.png', dpi=200, bbox_inches='tight')
+        plt.savefig('images/optimal_hour_summary.png', dpi=200, bbox_inches='tight')
         plt.close()
         
         print("\nSummary visualizations saved to disk.")
@@ -1422,7 +1422,7 @@ def generate_od_summary_report(results, top_regions):
         )
         
         plt.tight_layout()
-        plt.savefig('od_profitability_summary.png', dpi=300, bbox_inches='tight')
+        plt.savefig('images/od_profitability_summary.png', dpi=300, bbox_inches='tight')
         plt.close()
         
         print("\nOrigin-destination summary visualization saved to disk.")
@@ -1490,7 +1490,7 @@ def generate_payment_summary_report(results, top_regions):
         plt.ylabel('Average Profit ($)', fontsize=14)
         plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig('payment_profit_comparison.png', dpi=300, bbox_inches='tight')
+        plt.savefig('images/payment_profit_comparison.png', dpi=300, bbox_inches='tight')
         plt.close()
         
         # Plot tip comparison
@@ -1508,7 +1508,7 @@ def generate_payment_summary_report(results, top_regions):
         plt.ylabel('Average Tip ($)', fontsize=14)
         plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig('payment_tip_comparison.png', dpi=300, bbox_inches='tight')
+        plt.savefig('images/payment_tip_comparison.png', dpi=300, bbox_inches='tight')
         plt.close()
         
         print("\nPayment type comparison visualizations saved to disk.")
@@ -1619,7 +1619,7 @@ def generate_cluster_summary_report(results, top_regions):
         ax.legend(title='Cluster')
         
         plt.tight_layout()
-        plt.savefig('cluster_distribution_by_region.png', dpi=300, bbox_inches='tight')
+        plt.savefig('images/cluster_distribution_by_region.png', dpi=300, bbox_inches='tight')
         plt.close()
         
         print("\nCluster distribution visualization saved to disk.")
