@@ -1085,8 +1085,9 @@ def main():
     gc.collect()
     
     # Get top regions
-    top_regions = analyze_top_regions(df_processed, top_n=3)  # Analyze only top 3 regions
-    
+    top_regions = analyze_top_regions(df_processed, top_n=50)   # Analyze only top 50 regions
+                                                                # Why 100? Arbitrarily large number
+                                                                # Some regions are too small for business - ignore these
     # Save top regions for app
     os.makedirs('app_data', exist_ok=True)
     joblib.dump(top_regions, 'app_data/top_regions.joblib')
