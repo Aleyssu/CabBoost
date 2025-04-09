@@ -22,6 +22,15 @@ plt.style.use('ggplot')
 sns.set(font_scale=1.2)
 sns.set_style("whitegrid")
 
+def load_zone_lookup(filepath):
+    """Load and process the taxi zone lookup data"""
+    print("Loading zone lookup data...")
+    zone_lookup = pd.read_csv(filepath)
+    # Create a mapping dictionary for LocationID to Zone
+    zone_mapping = dict(zip(zone_lookup['LocationID'], zone_lookup['Zone']))
+    borough_mapping = dict(zip(zone_lookup['LocationID'], zone_lookup['Borough']))
+    return zone_mapping, borough_mapping
+
 def load_data(filepath, sample_size=None):
     """Load the taxi trip data from parquet file with optional sampling"""
     print("Loading data...")
@@ -369,7 +378,7 @@ def analyze_optimal_timing(df, region_id):
     
     return pd.DataFrame(optimal_timing)
 
-def plot_hourly_patterns(df, region_id):
+def plot_hourly_patterns(df, region_id, zone_mapping, borough_mapping):
     """Plot hourly profit patterns for different trip lengths in a region"""
     region_df = df[df['PULocationID'] == region_id].copy()
     
@@ -379,10 +388,14 @@ def plot_hourly_patterns(df, region_id):
     # Pivot for plotting
     pivot_data = hourly_profit.pivot(index='hour', columns='trip_length_category', values='total_profit')
     
+    # Get zone and borough names
+    zone_name = zone_mapping.get(region_id, 'Unknown')
+    borough_name = borough_mapping.get(region_id, 'Unknown')
+    
     # Plot
     plt.figure(figsize=(12, 7))
     sns.lineplot(data=pivot_data)
-    plt.title(f'Hourly Profit Patterns by Trip Length (Region {region_id})', fontsize=16)
+    plt.title(f'Hourly Profit Patterns by Trip Length ({borough_name}/{zone_name})', fontsize=16)
     plt.xlabel('Hour of Day', fontsize=14)
     plt.ylabel('Average Profit ($)', fontsize=14)
     plt.xticks(range(0, 24, 2))  # Show even hours only for cleaner plot
@@ -394,7 +407,7 @@ def plot_hourly_patterns(df, region_id):
     
     return hourly_profit
 
-def plot_weekly_patterns(df, region_id):
+def plot_weekly_patterns(df, region_id, zone_mapping, borough_mapping):
     """Plot day of week profit patterns for different trip lengths in a region"""
     region_df = df[df['PULocationID'] == region_id].copy()
     
@@ -404,10 +417,14 @@ def plot_weekly_patterns(df, region_id):
     # Pivot for plotting
     pivot_data = dow_profit.pivot(index='day_of_week', columns='trip_length_category', values='total_profit')
     
+    # Get zone and borough names
+    zone_name = zone_mapping.get(region_id, 'Unknown')
+    borough_name = borough_mapping.get(region_id, 'Unknown')
+    
     # Plot
     plt.figure(figsize=(10, 6))
     sns.lineplot(data=pivot_data)
-    plt.title(f'Day of Week Profit Patterns by Trip Length (Region {region_id})', fontsize=16)
+    plt.title(f'Day of Week Profit Patterns by Trip Length ({borough_name}/{zone_name})', fontsize=16)
     plt.xlabel('Day of Week (0=Monday, 6=Sunday)', fontsize=14)
     plt.ylabel('Average Profit ($)', fontsize=14)
     plt.xticks(range(7), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
@@ -419,14 +436,18 @@ def plot_weekly_patterns(df, region_id):
     
     return dow_profit
 
-def plot_profitability_analysis(profit_analysis, region_id):
+def plot_profitability_analysis(profit_analysis, region_id, zone_mapping, borough_mapping):
     """Plot the profitability analysis results"""
+    # Get zone and borough names
+    zone_name = zone_mapping.get(region_id, 'Unknown')
+    borough_name = borough_mapping.get(region_id, 'Unknown')
+    
     # Create a figure with 2 subplots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
     
     # Plot average profit
     sns.barplot(x='trip_length_category', y='avg_profit', data=profit_analysis, ax=ax1, palette='viridis')
-    ax1.set_title(f'Average Profit by Trip Length (Region {region_id})', fontsize=16)
+    ax1.set_title(f'Average Profit by Trip Length ({borough_name}/{zone_name})', fontsize=16)
     ax1.set_xlabel('Trip Length Category', fontsize=14)
     ax1.set_ylabel('Average Profit ($)', fontsize=14)
     ax1.tick_params(labelsize=12)
@@ -436,7 +457,7 @@ def plot_profitability_analysis(profit_analysis, region_id):
     
     # Plot profit per mile
     sns.barplot(x='trip_length_category', y='profit_per_mile', data=profit_analysis, ax=ax2, palette='viridis')
-    ax2.set_title(f'Profit per Mile by Trip Length (Region {region_id})', fontsize=16)
+    ax2.set_title(f'Profit per Mile by Trip Length ({borough_name}/{zone_name})', fontsize=16)
     ax2.set_xlabel('Trip Length Category', fontsize=14)
     ax2.set_ylabel('Profit per Mile ($)', fontsize=14)
     ax2.tick_params(labelsize=12)
@@ -448,8 +469,12 @@ def plot_profitability_analysis(profit_analysis, region_id):
     plt.savefig(f'images/profitability_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-def plot_seasonal_effects(seasonal_profit, region_id):
+def plot_seasonal_effects(seasonal_profit, region_id, zone_mapping, borough_mapping):
     """Plot seasonal effects on profitability"""
+    # Get zone and borough names
+    zone_name = zone_mapping.get(region_id, 'Unknown')
+    borough_name = borough_mapping.get(region_id, 'Unknown')
+    
     plt.figure(figsize=(14, 8))
     
     # Create a pivot table for the heatmap
@@ -457,15 +482,19 @@ def plot_seasonal_effects(seasonal_profit, region_id):
     
     # Plot the heatmap
     sns.heatmap(pivot_data, annot=True, fmt='.2f', cmap='YlGnBu', linewidths=0.5)
-    plt.title(f'Seasonal Effects on Profit by Trip Length (Region {region_id})', fontsize=16)
+    plt.title(f'Seasonal Effects on Profit by Trip Length ({borough_name}/{zone_name})', fontsize=16)
     plt.xlabel('Trip Length Category', fontsize=14)
     plt.ylabel('Season', fontsize=14)
     plt.tight_layout()
     plt.savefig(f'images/seasonal_effects_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-def plot_time_effects(time_profit, region_id):
+def plot_time_effects(time_profit, region_id, zone_mapping, borough_mapping):
     """Plot time of day effects on profitability"""
+    # Get zone and borough names
+    zone_name = zone_mapping.get(region_id, 'Unknown')
+    borough_name = borough_mapping.get(region_id, 'Unknown')
+    
     plt.figure(figsize=(14, 8))
     
     # Create a pivot table for the heatmap
@@ -473,15 +502,20 @@ def plot_time_effects(time_profit, region_id):
     
     # Plot the heatmap
     sns.heatmap(pivot_data, annot=True, fmt='.2f', cmap='YlGnBu', linewidths=0.5)
-    plt.title(f'Time of Day Effects on Profit by Trip Length (Region {region_id})', fontsize=16)
+    plt.title(f'Time of Day Effects on Profit by Trip Length ({borough_name}/{zone_name})', fontsize=16)
     plt.xlabel('Trip Length Category', fontsize=14)
     plt.ylabel('Time of Day', fontsize=14)
     plt.tight_layout()
     plt.savefig(f'images/time_effects_region_{region_id}.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-def print_recommendation(profit_analysis, region_id, metrics):
+def print_recommendation(profit_analysis, region_id, metrics, zone_mapping=None, borough_mapping=None):
     """Print trip length recommendation for a region based on different criteria"""
+    # Get zone and borough names if available
+    zone_name = zone_mapping.get(region_id, 'Unknown') if zone_mapping else 'Unknown'
+    borough_name = borough_mapping.get(region_id, 'Unknown') if borough_mapping else 'Unknown'
+    location = f"{borough_name}/{zone_name}" if zone_mapping and borough_mapping else f"Region {region_id}"
+    
     # Most profitable trip length (by average profit)
     most_profitable = profit_analysis.loc[profit_analysis['avg_profit'].idxmax()]
     
@@ -492,7 +526,7 @@ def print_recommendation(profit_analysis, region_id, metrics):
     most_common = profit_analysis.loc[profit_analysis['trip_count'].idxmax()]
     
     print("\n" + "="*80)
-    print(f"RECOMMENDATIONS FOR REGION {region_id}")
+    print(f"RECOMMENDATIONS FOR {location}")
     print("="*80)
     
     print(f"Most profitable trip length: {most_profitable['trip_length_category']}")
@@ -526,10 +560,15 @@ def print_recommendation(profit_analysis, region_id, metrics):
     print(f"OVERALL RECOMMENDATION: Focus on {most_profitable['trip_length_category']} trips for maximum profit")
     print("="*80 + "\n")
 
-def print_optimal_timing_recommendation(optimal_timing, region_id):
+def print_optimal_timing_recommendation(optimal_timing, region_id, zone_mapping=None, borough_mapping=None):
     """Print optimal timing recommendations for each trip length category"""
+    # Get zone and borough names if available
+    zone_name = zone_mapping.get(region_id, 'Unknown') if zone_mapping else 'Unknown'
+    borough_name = borough_mapping.get(region_id, 'Unknown') if borough_mapping else 'Unknown'
+    location = f"{borough_name}/{zone_name}" if zone_mapping and borough_mapping else f"Region {region_id}"
+    
     print("\n" + "="*100)
-    print(f"OPTIMAL TIMING RECOMMENDATIONS FOR REGION {region_id}")
+    print(f"OPTIMAL TIMING RECOMMENDATIONS FOR {location}")
     print("="*100)
     
     for _, row in optimal_timing.iterrows():
@@ -555,7 +594,7 @@ def print_optimal_timing_recommendation(optimal_timing, region_id):
     
     print("="*100)
 
-def analyze_od_pairs(df, region_id, top_n=5):
+def analyze_od_pairs(df, region_id, top_n=5, zone_mapping=None, borough_mapping=None):
     """Analyze the top origin-destination pairs for a specific region"""
     print(f"Analyzing top origin-destination pairs for region {region_id}...")
     
@@ -591,14 +630,25 @@ def analyze_od_pairs(df, region_id, top_n=5):
     
     od_df = pd.DataFrame(od_results)
     
+    # Get zone and borough names for origin and destinations
+    origin_zone = zone_mapping.get(region_id, 'Unknown') if zone_mapping else 'Unknown'
+    origin_borough = borough_mapping.get(region_id, 'Unknown') if borough_mapping else 'Unknown'
+    
     # Plot the results
     plt.figure(figsize=(12, 7))
+    
+    # Create labels for destinations
+    dest_labels = []
+    for dest_id in od_df['destination']:
+        dest_zone = zone_mapping.get(dest_id, 'Unknown') if zone_mapping else 'Unknown'
+        dest_borough = borough_mapping.get(dest_id, 'Unknown') if borough_mapping else 'Unknown'
+        dest_labels.append(f"{dest_borough}/{dest_zone}")
+    
     sns.barplot(x='destination', y='avg_profit', data=od_df, palette='viridis')
-    plt.title(f'Average Profit by Destination (Origin: Region {region_id})', fontsize=16)
-    plt.xlabel('Destination Region ID', fontsize=14)
+    plt.title(f'Average Profit by Destination (Origin: {origin_borough}/{origin_zone})', fontsize=16)
+    plt.xlabel('Destination', fontsize=14)
     plt.ylabel('Average Profit ($)', fontsize=14)
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
+    plt.xticks(range(len(dest_labels)), dest_labels, rotation=45, ha='right')
     
     # Add annotations
     for i, row in enumerate(od_df.itertuples()):
@@ -612,12 +662,16 @@ def analyze_od_pairs(df, region_id, top_n=5):
     
     return od_df
 
-def analyze_payment_types(df, region_id):
+def analyze_payment_types(df, region_id, zone_mapping=None, borough_mapping=None):
     """Analyze how payment types impact profitability in a specific region"""
     print(f"Analyzing payment type effects for region {region_id}...")
     
     # Filter data for the specified region
     region_df = df[df['PULocationID'] == region_id].copy()
+    
+    # Get zone and borough names
+    zone_name = zone_mapping.get(region_id, 'Unknown') if zone_mapping else 'Unknown'
+    borough_name = borough_mapping.get(region_id, 'Unknown') if borough_mapping else 'Unknown'
     
     # Create a mapping for payment types for better readability
     payment_map = {
@@ -650,7 +704,7 @@ def analyze_payment_types(df, region_id):
     payment_counts = region_df['payment_type_desc'].value_counts()
     payment_counts.plot(kind='pie', autopct='%1.1f%%', startangle=90, 
                        colors=sns.color_palette('viridis', len(payment_counts)))
-    plt.title(f'Payment Type Distribution (Region {region_id})', fontsize=16)
+    plt.title(f'Payment Type Distribution ({borough_name}/{zone_name})', fontsize=16)
     plt.ylabel('')  # Hide the 'None' ylabel
     plt.tight_layout()
     plt.savefig(f'images/payment_distribution_region_{region_id}.png', dpi=200, bbox_inches='tight')
@@ -665,7 +719,7 @@ def analyze_payment_types(df, region_id):
                                      values='total_profit')
     
     sns.heatmap(pivot_data, annot=True, fmt='.2f', cmap='YlGnBu', linewidths=0.5)
-    plt.title(f'Average Profit by Payment Type and Trip Length (Region {region_id})', fontsize=16)
+    plt.title(f'Average Profit by Payment Type and Trip Length ({borough_name}/{zone_name})', fontsize=16)
     plt.xlabel('Trip Length Category', fontsize=14)
     plt.ylabel('Payment Type', fontsize=14)
     plt.tight_layout()
@@ -681,7 +735,7 @@ def analyze_payment_types(df, region_id):
                                      values='tip_amount')
     
     sns.heatmap(pivot_data, annot=True, fmt='.2f', cmap='YlGnBu', linewidths=0.5)
-    plt.title(f'Average Tip by Payment Type and Trip Length (Region {region_id})', fontsize=16)
+    plt.title(f'Average Tip by Payment Type and Trip Length ({borough_name}/{zone_name})', fontsize=16)
     plt.xlabel('Trip Length Category', fontsize=14)
     plt.ylabel('Payment Type', fontsize=14)
     plt.tight_layout()
@@ -866,9 +920,13 @@ def build_optimized_model(df, region_id, max_samples=50000):
         }
     }
 
-def perform_clustering_analysis(df, region_id, n_clusters=4):
+def perform_clustering_analysis(df, region_id, n_clusters=4, zone_mapping=None, borough_mapping=None):
     """Perform clustering analysis to identify distinct trip patterns in a region"""
     print(f"Performing clustering analysis for region {region_id}...")
+    
+    # Get zone and borough names
+    zone_name = zone_mapping.get(region_id, 'Unknown') if zone_mapping else 'Unknown'
+    borough_name = borough_mapping.get(region_id, 'Unknown') if borough_mapping else 'Unknown'
     
     # Filter data for the specified region
     region_df = df[df['PULocationID'] == region_id].copy()
@@ -919,7 +977,7 @@ def perform_clustering_analysis(df, region_id, n_clusters=4):
     # Plot PCA scatter with clusters
     plt.subplot(2, 1, 1)
     sns.scatterplot(x='PC1', y='PC2', hue='cluster', data=pca_df, palette='viridis', s=50, alpha=0.7)
-    plt.title(f'Trip Clusters for Region {region_id} (PCA Visualization)', fontsize=16)
+    plt.title(f'Trip Clusters for {borough_name}/{zone_name} (PCA Visualization)', fontsize=16)
     plt.xlabel('Principal Component 1', fontsize=12)
     plt.ylabel('Principal Component 2', fontsize=12)
     plt.legend(title='Cluster', title_fontsize=12)
@@ -989,7 +1047,7 @@ def perform_clustering_analysis(df, region_id, n_clusters=4):
     
     # Add legend
     plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
-    plt.title(f'Cluster Characteristics Comparison (Region {region_id})', fontsize=16)
+    plt.title(f'Cluster Characteristics Comparison ({borough_name}/{zone_name})', fontsize=16)
     
     plt.tight_layout()
     plt.savefig(f'images/cluster_analysis_region_{region_id}.png', dpi=300, bbox_inches='tight')
@@ -1006,7 +1064,7 @@ def perform_clustering_analysis(df, region_id, n_clusters=4):
         alpha=0.7,
         data=cluster_df
     )
-    plt.title(f'Trip Profitability vs Distance by Cluster (Region {region_id})', fontsize=16)
+    plt.title(f'Trip Profitability vs Distance by Cluster ({borough_name}/{zone_name})', fontsize=16)
     plt.xlabel('Trip Distance (miles)', fontsize=14)
     plt.ylabel('Total Profit ($)', fontsize=14)
     plt.legend(title='Cluster', title_fontsize=12)
@@ -1015,7 +1073,7 @@ def perform_clustering_analysis(df, region_id, n_clusters=4):
     plt.close()
     
     # Create a summary table
-    print(f"\nCLUSTER SUMMARY FOR REGION {region_id}:")
+    print(f"\nCLUSTER SUMMARY FOR {borough_name}/{zone_name}:")
     print(cluster_summary[['cluster', 'count', 'percentage', 'trip_distance', 'total_profit', 
                           'profit_per_mile', 'hour', 'day_of_week', 'is_weekend', 'is_rush_hour']].to_string(index=False))
     
@@ -1073,6 +1131,13 @@ def perform_clustering_analysis(df, region_id, n_clusters=4):
 
 def main():
     """Main function to run the analysis"""
+    # Create necessary directories
+    os.makedirs('images', exist_ok=True)
+    os.makedirs('app_data', exist_ok=True)
+    
+    # Load zone lookup data
+    zone_mapping, borough_mapping = load_zone_lookup("Taxi Zone Lookup.csv")
+    
     # Load data with sampling to reduce memory usage
     sample_size = 1000000  # Use only 1M records
     df = load_data("tripdata_combined.parquet", sample_size=sample_size)
@@ -1085,21 +1150,19 @@ def main():
     gc.collect()
     
     # Get top regions
-    top_regions = analyze_top_regions(df_processed, top_n=50)   # Analyze only top 50 regions
-                                                                # Why 100? Arbitrarily large number
-                                                                # Some regions are too small for business - ignore these
+    top_regions = analyze_top_regions(df_processed, top_n=3)
+    
     # Save top regions for app
-    os.makedirs('app_data', exist_ok=True)
     joblib.dump(top_regions, 'app_data/top_regions.joblib')
     
     # Analyze each top region
     results = {}
     
     for region_id in top_regions:
-        print(f"\nAnalyzing region {region_id}...")
+        print(f"\nAnalyzing region {region_id} ({zone_mapping.get(region_id, 'Unknown')} in {borough_mapping.get(region_id, 'Unknown')})...")
         
         # Build optimized regression model
-        print(f"Building optimized model for region {region_id}")
+        print(f"Building optimized model for {zone_mapping.get(region_id, 'Unknown')}")
         model_results = build_optimized_model(df_processed, region_id, max_samples=50000)
         
         # Analyze profitability by trip length
@@ -1115,28 +1178,28 @@ def main():
         optimal_timing = analyze_optimal_timing(df_processed, region_id)
         
         # Plot hourly and weekly patterns
-        hourly_data = plot_hourly_patterns(df_processed, region_id)
-        weekly_data = plot_weekly_patterns(df_processed, region_id)
+        hourly_data = plot_hourly_patterns(df_processed, region_id, zone_mapping, borough_mapping)
+        weekly_data = plot_weekly_patterns(df_processed, region_id, zone_mapping, borough_mapping)
         
         # Analyze origin-destination pairs
-        od_analysis = analyze_od_pairs(df_processed, region_id)
+        od_analysis = analyze_od_pairs(df_processed, region_id, zone_mapping=zone_mapping, borough_mapping=borough_mapping)
         
         # Analyze payment types impact
-        payment_analysis = analyze_payment_types(df_processed, region_id)
+        payment_analysis = analyze_payment_types(df_processed, region_id, zone_mapping=zone_mapping, borough_mapping=borough_mapping)
         
         # Perform clustering analysis
-        cluster_analysis = perform_clustering_analysis(df_processed, region_id)
+        cluster_analysis = perform_clustering_analysis(df_processed, region_id, zone_mapping=zone_mapping, borough_mapping=borough_mapping)
         
         # Plot results
-        plot_profitability_analysis(profit_analysis, region_id)
-        plot_seasonal_effects(seasonal_profit, region_id)
-        plot_time_effects(time_profit, region_id)
+        plot_profitability_analysis(profit_analysis, region_id, zone_mapping, borough_mapping)
+        plot_seasonal_effects(seasonal_profit, region_id, zone_mapping, borough_mapping)
+        plot_time_effects(time_profit, region_id, zone_mapping, borough_mapping)
         
         # Print recommendations
-        print_recommendation(profit_analysis, region_id, model_results['metrics'])
+        print_recommendation(profit_analysis, region_id, model_results['metrics'], zone_mapping, borough_mapping)
         
         # Print optimal timing recommendations
-        print_optimal_timing_recommendation(optimal_timing, region_id)
+        print_optimal_timing_recommendation(optimal_timing, region_id, zone_mapping, borough_mapping)
         
         # Store results (minimal data)
         results[region_id] = {
@@ -1147,7 +1210,9 @@ def main():
             'od_analysis': od_analysis,
             'payment_analysis': payment_analysis,
             'cluster_analysis': cluster_analysis,
-            'metrics': model_results['metrics']
+            'metrics': model_results['metrics'],
+            'zone_name': zone_mapping.get(region_id, 'Unknown'),
+            'borough': borough_mapping.get(region_id, 'Unknown')
         }
         
         # Save individual region data for app
@@ -1157,9 +1222,11 @@ def main():
             'optimal_timing': optimal_timing,
             'hourly_data': hourly_data,
             'weekly_data': weekly_data,
-            'od_analysis': od_analysis
+            'od_analysis': od_analysis,
+            'zone_name': zone_mapping.get(region_id, 'Unknown'),
+            'borough': borough_mapping.get(region_id, 'Unknown')
         }, region_data_path)
-        print(f"Saved region {region_id} data to {region_data_path}")
+        print(f"Saved region {region_id} ({zone_mapping.get(region_id, 'Unknown')} in {borough_mapping.get(region_id, 'Unknown')}) data to {region_data_path}")
         
         # Clear memory after each region
         gc.collect()
@@ -1169,13 +1236,13 @@ def main():
     print("Saved all analysis results to app_data/all_results.joblib")
     
     # Generate reports
-    generate_summary_report(results, top_regions)
-    generate_timing_summary_report(results, top_regions)
-    generate_od_summary_report(results, top_regions)
-    generate_payment_summary_report(results, top_regions)
-    generate_cluster_summary_report(results, top_regions)
+    generate_summary_report(results, top_regions, zone_mapping, borough_mapping)
+    generate_timing_summary_report(results, top_regions, zone_mapping, borough_mapping)
+    generate_od_summary_report(results, top_regions, zone_mapping, borough_mapping)
+    generate_payment_summary_report(results, top_regions, zone_mapping, borough_mapping)
+    generate_cluster_summary_report(results, top_regions, zone_mapping, borough_mapping)
 
-def generate_summary_report(results, top_regions):
+def generate_summary_report(results, top_regions, zone_mapping, borough_mapping):
     """Generate a summary report of the analysis results"""
     print("\n" + "="*100)
     print("SUMMARY REPORT: OPTIMAL TRIP LENGTHS BY REGION")
@@ -1196,6 +1263,9 @@ def generate_summary_report(results, top_regions):
         # Create a summary entry with metrics compatible with both optimized and basic models
         summary_entry = {
             'region_id': region_id,
+            'zone_name': zone_mapping.get(region_id, 'Unknown'),
+            'borough': borough_mapping.get(region_id, 'Unknown'),
+            'location_label': f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}",
             'most_profitable_length': most_profitable['trip_length_category'],
             'avg_profit': most_profitable['avg_profit'],
             'most_efficient_length': most_efficient['trip_length_category'],
@@ -1231,6 +1301,9 @@ def generate_summary_report(results, top_regions):
         # Create a metrics entry compatible with both optimized and basic models
         metrics_entry = {
             'region_id': region_id,
+            'zone_name': zone_mapping.get(region_id, 'Unknown'),
+            'borough': borough_mapping.get(region_id, 'Unknown'),
+            'location': f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}",
             'MSE': f"{metrics['test_mse']:.2f}",
             'RMSE': f"{metrics['test_rmse']:.2f}",
             'MAE': f"{metrics['test_mae']:.2f}",
@@ -1254,11 +1327,12 @@ def generate_summary_report(results, top_regions):
     
     # Plot a comparison of average profit across regions
     plt.figure(figsize=(12, 8))
-    sns.barplot(x='region_id', y='avg_profit', data=summary_df, palette='viridis')
-    plt.title('Average Profit by Region (Most Profitable Trip Length)', fontsize=16)
-    plt.xlabel('Region ID', fontsize=14)
+    # Use location_label instead of region_id for x-axis
+    sns.barplot(x='location_label', y='avg_profit', data=summary_df, palette='viridis')
+    plt.title('Average Profit by Location (Most Profitable Trip Length)', fontsize=16)
+    plt.xlabel('Location', fontsize=14)
     plt.ylabel('Average Profit ($)', fontsize=14)
-    plt.xticks(fontsize=12)
+    plt.xticks(rotation=45, ha='right', fontsize=12)
     plt.yticks(fontsize=12)
     
     # Add annotations
@@ -1282,6 +1356,7 @@ def generate_summary_report(results, top_regions):
     test_r2_vals = [results[region_id]['metrics']['test_r2'] for region_id in top_regions]
     cv_r2_means = []
     cv_r2_stds = []
+    location_labels = []
     
     for region_id in top_regions:
         metrics = results[region_id]['metrics']
@@ -1291,16 +1366,19 @@ def generate_summary_report(results, top_regions):
         elif 'cv_r2' in metrics:
             cv_r2_means.append(metrics['cv_r2'])
             cv_r2_stds.append(0.0)  # No std dev for optimized model
+        
+        # Create location label
+        location_labels.append(f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}")
     
     ax.bar([i - width/2 for i in x], test_r2_vals, width, label='Test R²', alpha=0.7)
     ax.bar([i + width/2 for i in x], cv_r2_means, width, label='Cross-Validation R² (mean)', alpha=0.7,
             yerr=cv_r2_stds, capsize=5)
     
     ax.set_ylabel('R² Score', fontsize=14)
-    ax.set_xlabel('Region ID', fontsize=14)
-    ax.set_title('Model Performance Comparison Across Regions', fontsize=16)
+    ax.set_xlabel('Location', fontsize=14)
+    ax.set_title('Model Performance Comparison Across Locations', fontsize=16)
     ax.set_xticks(x)
-    ax.set_xticklabels([str(region_id) for region_id in top_regions])
+    ax.set_xticklabels(location_labels, rotation=45, ha='right')
     ax.legend()
     
     plt.tight_layout()
@@ -1309,7 +1387,7 @@ def generate_summary_report(results, top_regions):
     
     print("Summary report generated and saved!")
 
-def generate_timing_summary_report(results, top_regions):
+def generate_timing_summary_report(results, top_regions, zone_mapping, borough_mapping):
     """Generate a summary report of the optimal timing results"""
     print("\n" + "="*100)
     print("SUMMARY REPORT: OPTIMAL TIMING BY REGION AND TRIP LENGTH")
@@ -1324,6 +1402,9 @@ def generate_timing_summary_report(results, top_regions):
         # Add region_id to each row
         optimal_timing_with_region = optimal_timing.copy()
         optimal_timing_with_region['region_id'] = region_id
+        optimal_timing_with_region['zone_name'] = zone_mapping.get(region_id, 'Unknown')
+        optimal_timing_with_region['borough'] = borough_mapping.get(region_id, 'Unknown')
+        optimal_timing_with_region['location'] = f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}"
         
         all_timing_data.append(optimal_timing_with_region)
     
@@ -1331,26 +1412,26 @@ def generate_timing_summary_report(results, top_regions):
     if all_timing_data:
         combined_timing = pd.concat(all_timing_data)
         
-        # Create a summary table
-        summary_table = combined_timing.pivot(index='trip_length_category', columns='region_id', values=['best_hour', 'best_day', 'best_season'])
+        # Create a summary table using location instead of region_id
+        summary_table = combined_timing.pivot(index='trip_length_category', columns='location', values=['best_hour', 'best_day', 'best_season'])
         
-        print("\nOPTIMAL HOUR BY TRIP LENGTH AND REGION:")
+        print("\nOPTIMAL HOUR BY TRIP LENGTH AND LOCATION:")
         print(summary_table['best_hour'].to_string())
         
-        print("\nOPTIMAL DAY BY TRIP LENGTH AND REGION:")
+        print("\nOPTIMAL DAY BY TRIP LENGTH AND LOCATION:")
         print(summary_table['best_day'].to_string())
         
-        print("\nOPTIMAL SEASON BY TRIP LENGTH AND REGION:")
+        print("\nOPTIMAL SEASON BY TRIP LENGTH AND LOCATION:")
         print(summary_table['best_season'].to_string())
         
         # Create and save a visualization of best hours
         plt.figure(figsize=(12, 8))
         
-        # Hour heatmap
-        hour_pivot = combined_timing.pivot(index='trip_length_category', columns='region_id', values='best_hour')
+        # Hour heatmap using location instead of region_id
+        hour_pivot = combined_timing.pivot(index='trip_length_category', columns='location', values='best_hour')
         sns.heatmap(hour_pivot, annot=True, fmt='d', cmap='YlOrRd', linewidths=0.5)
         
-        plt.title('Optimal Hour by Trip Length and Region', fontsize=16)
+        plt.title('Optimal Hour by Trip Length and Location', fontsize=16)
         plt.tight_layout()
         plt.savefig('images/optimal_hour_summary.png', dpi=200, bbox_inches='tight')
         plt.close()
@@ -1361,7 +1442,7 @@ def generate_timing_summary_report(results, top_regions):
     
     print("="*100)
 
-def generate_od_summary_report(results, top_regions):
+def generate_od_summary_report(results, top_regions, zone_mapping, borough_mapping):
     """Generate a summary report of the origin-destination analysis results"""
     print("\n" + "="*100)
     print("SUMMARY REPORT: MOST PROFITABLE ORIGIN-DESTINATION PAIRS")
@@ -1372,6 +1453,26 @@ def generate_od_summary_report(results, top_regions):
     
     for region_id in top_regions:
         od_analysis = results[region_id]['od_analysis']
+        # Add origin location information
+        od_analysis['origin_zone'] = zone_mapping.get(region_id, 'Unknown')
+        od_analysis['origin_borough'] = borough_mapping.get(region_id, 'Unknown')
+        od_analysis['origin_location'] = f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}"
+        
+        # Add destination location information
+        dest_zones = []
+        dest_boroughs = []
+        dest_locations = []
+        for dest_id in od_analysis['destination']:
+            dest_zone = zone_mapping.get(dest_id, 'Unknown')
+            dest_borough = borough_mapping.get(dest_id, 'Unknown')
+            dest_zones.append(dest_zone)
+            dest_boroughs.append(dest_borough)
+            dest_locations.append(f"{dest_borough}/{dest_zone}")
+        
+        od_analysis['destination_zone'] = dest_zones
+        od_analysis['destination_borough'] = dest_boroughs
+        od_analysis['destination_location'] = dest_locations
+        
         all_od_data.append(od_analysis)
     
     # Combine all data
@@ -1382,7 +1483,7 @@ def generate_od_summary_report(results, top_regions):
         top_routes = combined_od.sort_values('avg_profit', ascending=False).head(10)
         
         print("TOP 10 MOST PROFITABLE ROUTES:")
-        print(top_routes[['origin', 'destination', 'avg_profit', 'avg_distance', 'profit_per_mile', 'trip_count']].to_string(index=False))
+        print(top_routes[['origin_location', 'destination_location', 'avg_profit', 'avg_distance', 'profit_per_mile', 'trip_count']].to_string(index=False))
         
         # Create visualization - simplified to avoid colorbar issues
         plt.figure(figsize=(14, 8))
@@ -1397,9 +1498,9 @@ def generate_od_summary_report(results, top_regions):
             cmap='viridis'
         )
         
-        # Add labels for top 5 routes
+        # Add labels for top 5 routes using location names
         for idx, row in top_routes.head(5).iterrows():
-            plt.annotate(f"{row['origin']} → {row['destination']}", 
+            plt.annotate(f"{row['origin_location']} → {row['destination_location']}", 
                         xy=(row['avg_distance'], row['avg_profit']),
                         xytext=(5, 5), textcoords='offset points',
                         fontsize=10, fontweight='bold')
@@ -1432,7 +1533,7 @@ def generate_od_summary_report(results, top_regions):
     
     print("="*100)
 
-def generate_payment_summary_report(results, top_regions):
+def generate_payment_summary_report(results, top_regions, zone_mapping, borough_mapping):
     """Generate a summary report of payment type analysis results"""
     print("\n" + "="*100)
     print("SUMMARY REPORT: PAYMENT TYPE IMPACT ON PROFITABILITY")
@@ -1441,6 +1542,7 @@ def generate_payment_summary_report(results, top_regions):
     # Summarize payment type findings
     for region_id in top_regions:
         payment_analysis = results[region_id]['payment_analysis']
+        location = f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}"
         
         # Find most profitable payment type
         by_payment = payment_analysis.groupby('payment_type_desc')['total_profit'].mean().reset_index()
@@ -1450,7 +1552,7 @@ def generate_payment_summary_report(results, top_regions):
         by_payment_tip = payment_analysis.groupby('payment_type_desc')['tip_amount'].mean().reset_index()
         highest_tip_payment = by_payment_tip.loc[by_payment_tip['tip_amount'].idxmax()]
         
-        print(f"\nREGION {region_id} PAYMENT INSIGHTS:")
+        print(f"\nLOCATION: {location} PAYMENT INSIGHTS:")
         print(f"  - Most profitable payment type: {most_profitable_payment['payment_type_desc']} (${most_profitable_payment['total_profit']:.2f} avg profit)")
         print(f"  - Highest tip payment type: {highest_tip_payment['payment_type_desc']} (${highest_tip_payment['tip_amount']:.2f} avg tip)")
     
@@ -1466,8 +1568,11 @@ def generate_payment_summary_report(results, top_regions):
             'tip_amount': 'mean'
         }).reset_index()
         
-        # Add region id
+        # Add location information
         by_payment['region_id'] = region_id
+        by_payment['zone_name'] = zone_mapping.get(region_id, 'Unknown')
+        by_payment['borough'] = borough_mapping.get(region_id, 'Unknown')
+        by_payment['location'] = f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}"
         
         # Add to summary data
         payment_summary.append(by_payment)
@@ -1476,38 +1581,88 @@ def generate_payment_summary_report(results, top_regions):
     if payment_summary:
         combined_payment = pd.concat(payment_summary)
         
+        # Create a dataframe with location as index for easier plotting
+        plot_data = combined_payment.copy()
+        
         # Plot comparison
         plt.figure(figsize=(14, 8))
         
-        # Create a grouped bar chart
-        sns.catplot(
-            data=combined_payment, kind="bar",
-            x="payment_type_desc", y="total_profit", hue="region_id",
-            palette="viridis", alpha=.8, height=6, aspect=2
-        )
+        # Create a grouped bar chart - using basic matplotlib to avoid seaborn catplot issues
+        payment_types = plot_data['payment_type_desc'].unique()
+        locations = plot_data['location'].unique()
         
-        plt.title('Average Profit by Payment Type Across Regions', fontsize=16)
-        plt.xlabel('Payment Type', fontsize=14)
-        plt.ylabel('Average Profit ($)', fontsize=14)
-        plt.xticks(rotation=45)
+        fig, ax = plt.subplots(figsize=(14, 8))
+        
+        # Calculate bar positions
+        num_locations = len(locations)
+        bar_width = 0.8 / num_locations
+        colors = plt.cm.viridis(np.linspace(0, 1, num_locations))
+        
+        # Plot each location as a group of bars
+        for i, location in enumerate(locations):
+            location_data = plot_data[plot_data['location'] == location]
+            
+            # Create a position for each payment type
+            positions = np.arange(len(payment_types))
+            profit_values = []
+            
+            # Get profit values for each payment type
+            for payment_type in payment_types:
+                payment_data = location_data[location_data['payment_type_desc'] == payment_type]
+                if len(payment_data) > 0:
+                    profit_values.append(payment_data['total_profit'].values[0])
+                else:
+                    profit_values.append(0)
+            
+            # Plot the bars
+            offset = (i - num_locations/2 + 0.5) * bar_width
+            bars = ax.bar(positions + offset, profit_values, bar_width, 
+                          label=location, color=colors[i], alpha=0.8)
+        
+        # Set labels and title
+        ax.set_ylabel('Average Profit ($)', fontsize=14)
+        ax.set_xlabel('Payment Type', fontsize=14)
+        ax.set_title('Average Profit by Payment Type Across Locations', fontsize=16)
+        ax.set_xticks(np.arange(len(payment_types)))
+        ax.set_xticklabels(payment_types, rotation=45, ha='right')
+        ax.legend(title='Location')
+        
         plt.tight_layout()
         plt.savefig('images/payment_profit_comparison.png', dpi=300, bbox_inches='tight')
         plt.close()
         
-        # Plot tip comparison
-        plt.figure(figsize=(14, 8))
+        # Plot tip comparison - again using basic matplotlib
+        fig, ax = plt.subplots(figsize=(14, 8))
         
-        # Create a grouped bar chart for tips
-        sns.catplot(
-            data=combined_payment, kind="bar",
-            x="payment_type_desc", y="tip_amount", hue="region_id",
-            palette="viridis", alpha=.8, height=6, aspect=2
-        )
+        # Plot each location as a group of bars for tips
+        for i, location in enumerate(locations):
+            location_data = plot_data[plot_data['location'] == location]
+            
+            # Create a position for each payment type
+            positions = np.arange(len(payment_types))
+            tip_values = []
+            
+            # Get tip values for each payment type
+            for payment_type in payment_types:
+                payment_data = location_data[location_data['payment_type_desc'] == payment_type]
+                if len(payment_data) > 0:
+                    tip_values.append(payment_data['tip_amount'].values[0])
+                else:
+                    tip_values.append(0)
+            
+            # Plot the bars
+            offset = (i - num_locations/2 + 0.5) * bar_width
+            bars = ax.bar(positions + offset, tip_values, bar_width, 
+                          label=location, color=colors[i], alpha=0.8)
         
-        plt.title('Average Tip by Payment Type Across Regions', fontsize=16)
-        plt.xlabel('Payment Type', fontsize=14)
-        plt.ylabel('Average Tip ($)', fontsize=14)
-        plt.xticks(rotation=45)
+        # Set labels and title
+        ax.set_ylabel('Average Tip ($)', fontsize=14)
+        ax.set_xlabel('Payment Type', fontsize=14)
+        ax.set_title('Average Tip by Payment Type Across Locations', fontsize=16)
+        ax.set_xticks(np.arange(len(payment_types)))
+        ax.set_xticklabels(payment_types, rotation=45, ha='right')
+        ax.legend(title='Location')
+        
         plt.tight_layout()
         plt.savefig('images/payment_tip_comparison.png', dpi=300, bbox_inches='tight')
         plt.close()
@@ -1518,7 +1673,7 @@ def generate_payment_summary_report(results, top_regions):
     
     print("="*100)
 
-def generate_cluster_summary_report(results, top_regions):
+def generate_cluster_summary_report(results, top_regions, zone_mapping, borough_mapping):
     """Generate a summary report of the clustering analysis results"""
     print("\n" + "="*100)
     print("SUMMARY REPORT: TRIP PATTERN CLUSTERS")
@@ -1530,9 +1685,12 @@ def generate_cluster_summary_report(results, top_regions):
         if 'cluster_analysis' in results[region_id]:
             cluster_types = results[region_id]['cluster_analysis']['cluster_types']
             
-            # Add region ID
+            # Add location information
             cluster_types_with_region = cluster_types.copy()
             cluster_types_with_region['region_id'] = region_id
+            cluster_types_with_region['zone_name'] = zone_mapping.get(region_id, 'Unknown')
+            cluster_types_with_region['borough'] = borough_mapping.get(region_id, 'Unknown')
+            cluster_types_with_region['location'] = f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}"
             
             all_cluster_types.append(cluster_types_with_region)
     
@@ -1543,8 +1701,9 @@ def generate_cluster_summary_report(results, top_regions):
         # Print summary by region
         for region_id in top_regions:
             region_clusters = combined_clusters[combined_clusters['region_id'] == region_id]
+            location = f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}"
             
-            print(f"\nREGION {region_id} CLUSTER INSIGHTS:")
+            print(f"\nLOCATION: {location} CLUSTER INSIGHTS:")
             for _, cluster in region_clusters.iterrows():
                 print(f"  - Cluster {int(cluster['cluster'])}: {cluster['type']} "
                       f"({cluster['percentage']:.1f}% of trips, "
@@ -1558,9 +1717,11 @@ def generate_cluster_summary_report(results, top_regions):
         for region_id in top_regions:
             if 'cluster_analysis' in results[region_id]:
                 summary = results[region_id]['cluster_analysis']['cluster_summary']
+                location = f"{borough_mapping.get(region_id, 'Unknown')}/{zone_mapping.get(region_id, 'Unknown')}"
                 for _, row in summary.iterrows():
                     plot_data.append({
                         'region_id': region_id,
+                        'location': location,
                         'cluster': f"Cluster {int(row['cluster'])}",
                         'percentage': row['percentage'],
                         'profit_per_mile': row['profit_per_mile']
@@ -1568,8 +1729,8 @@ def generate_cluster_summary_report(results, top_regions):
         
         plot_df = pd.DataFrame(plot_data)
         
-        # Create a simple grouped bar chart
-        regions = plot_df['region_id'].unique()
+        # Create a simple grouped bar chart using location instead of region_id
+        locations = plot_df['location'].unique()
         clusters = plot_df['cluster'].unique()
         
         # Set up the plot
@@ -1580,14 +1741,14 @@ def generate_cluster_summary_report(results, top_regions):
         # Plot each cluster as a group of bars
         for i, cluster in enumerate(clusters):
             cluster_data = plot_df[plot_df['cluster'] == cluster]
-            positions = np.arange(len(regions))
+            positions = np.arange(len(locations))
             heights = []
             
-            # Get heights for each region
-            for region in regions:
-                region_data = cluster_data[cluster_data['region_id'] == region]
-                if len(region_data) > 0:
-                    heights.append(region_data['percentage'].values[0])
+            # Get heights for each location
+            for location in locations:
+                location_data = cluster_data[cluster_data['location'] == location]
+                if len(location_data) > 0:
+                    heights.append(location_data['percentage'].values[0])
                 else:
                     heights.append(0)
             
@@ -1596,10 +1757,10 @@ def generate_cluster_summary_report(results, top_regions):
             bars = ax.bar(positions + offset, heights, bar_width, label=cluster, color=colors[i], alpha=0.8)
             
             # Add profit per mile annotations to bars
-            for j, region in enumerate(regions):
-                region_data = cluster_data[cluster_data['region_id'] == region]
-                if len(region_data) > 0 and heights[j] > 5:  # Only annotate if bar is large enough
-                    profit = region_data['profit_per_mile'].values[0]
+            for j, location in enumerate(locations):
+                location_data = cluster_data[cluster_data['location'] == location]
+                if len(location_data) > 0 and heights[j] > 5:  # Only annotate if bar is large enough
+                    profit = location_data['profit_per_mile'].values[0]
                     ax.text(
                         j + offset, 
                         heights[j]/2, 
@@ -1613,14 +1774,14 @@ def generate_cluster_summary_report(results, top_regions):
         
         # Set labels and title
         ax.set_ylabel('Percentage of Trips (%)', fontsize=14)
-        ax.set_xlabel('Region ID', fontsize=14)
-        ax.set_title('Cluster Distribution by Region', fontsize=16)
-        ax.set_xticks(np.arange(len(regions)))
-        ax.set_xticklabels(regions)
+        ax.set_xlabel('Location', fontsize=14)
+        ax.set_title('Cluster Distribution by Location', fontsize=16)
+        ax.set_xticks(np.arange(len(locations)))
+        ax.set_xticklabels(locations, rotation=45, ha='right')
         ax.legend(title='Cluster')
         
         plt.tight_layout()
-        plt.savefig('images/cluster_distribution_by_region.png', dpi=300, bbox_inches='tight')
+        plt.savefig('images/cluster_distribution_by_location.png', dpi=300, bbox_inches='tight')
         plt.close()
         
         print("\nCluster distribution visualization saved to disk.")
