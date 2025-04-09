@@ -15,6 +15,16 @@ st.set_page_config(
     layout="wide",
 )
 
+# Function to load zone lookup data
+def load_zone_lookup(filepath):
+    """Load and process the taxi zone lookup data"""
+    print("Loading zone lookup data...")
+    zone_lookup = pd.read_csv(filepath)
+    # Create a mapping dictionary for LocationID to Zone
+    zone_mapping = dict(zip(zone_lookup['LocationID'], zone_lookup['Zone']))
+    borough_mapping = dict(zip(zone_lookup['LocationID'], zone_lookup['Borough']))
+    return zone_mapping, borough_mapping
+
 # Function to check if required data and models exist
 def check_data_availability():
     required_paths = [
@@ -50,8 +60,29 @@ def load_data_and_models():
     top_regions = joblib.load('app_data/top_regions.joblib')
     all_results = joblib.load('app_data/all_results.joblib')
     
+    # Load zone lookup data if available
+    zone_mapping = {}
+    borough_mapping = {}
+    zone_mapping, borough_mapping = load_zone_lookup('Taxi Zone Lookup.csv')
+    
     models = {}
     region_data = {}
+    
+    # Create a format function for regions
+    def format_region(region_id):
+        zone = zone_mapping.get(region_id, f"ID {region_id}")
+        borough = borough_mapping.get(region_id, "")
+        if borough:
+            return f"{zone} ({borough})"
+        return zone
+    
+    # Create a function to get location name
+    def get_location_name(region_id):
+        location_name = zone_mapping.get(region_id, f"ID {region_id}")
+        borough = borough_mapping.get(region_id, "")
+        if borough:
+            location_name = f"{location_name} ({borough})"
+        return location_name
     
     for region_id in top_regions:
         # Load model if exists
@@ -59,14 +90,15 @@ def load_data_and_models():
         if os.path.exists(model_path):
             models[region_id] = joblib.load(model_path)
         else:
-            st.warning(f"Model for region {region_id} not found. Some predictions may not be available.")
+            location_name = format_region(region_id)
+            st.warning(f"Model not available for {location_name}. Only using historical analysis.")
             
         # Load region data
         data_path = f'app_data/region_{region_id}_data.joblib'
         if os.path.exists(data_path):
             region_data[region_id] = joblib.load(data_path)
     
-    return top_regions, all_results, models, region_data
+    return top_regions, all_results, models, region_data, zone_mapping, borough_mapping
 
 # Function to get current time features
 def get_current_time_features():
@@ -162,8 +194,19 @@ def recommend_optimal_trip_length(region_data, time_features):
     
     return sorted_matches
 
-def draw_profit_by_hour_chart(region_data, region_id):
+def draw_profit_by_hour_chart(region_data, region_id, zone_mapping=None, borough_mapping=None):
     hourly_data = region_data['hourly_data']
+    
+    # Get location name
+    if 'get_location_name' in globals():
+        location_name = get_location_name(region_id)
+    else:
+        zone = zone_mapping.get(region_id, f"ID {region_id}") if zone_mapping else f"ID {region_id}"
+        borough = borough_mapping.get(region_id, "") if borough_mapping else ""
+        if borough:
+            location_name = f"{zone} ({borough})"
+        else:
+            location_name = zone
     
     # Pivot the data
     pivot_data = hourly_data.pivot(index='hour', columns='trip_length_category', values='total_profit')
@@ -175,7 +218,7 @@ def draw_profit_by_hour_chart(region_data, region_id):
     sns.lineplot(data=pivot_data, ax=ax)
     
     # Set labels and title
-    ax.set_title(f'Hourly Profit by Trip Length (Region {region_id})', fontsize=16)
+    ax.set_title(f'Hourly Profit by Trip Length ({location_name})', fontsize=16)
     ax.set_xlabel('Hour of Day', fontsize=14)
     ax.set_ylabel('Average Profit ($)', fontsize=14)
     
@@ -192,8 +235,19 @@ def draw_profit_by_hour_chart(region_data, region_id):
     # Show the plot
     st.pyplot(fig)
 
-def draw_profit_by_day_chart(region_data, region_id):
+def draw_profit_by_day_chart(region_data, region_id, zone_mapping=None, borough_mapping=None):
     weekly_data = region_data['weekly_data']
+    
+    # Get location name
+    if 'get_location_name' in globals():
+        location_name = get_location_name(region_id)
+    else:
+        zone = zone_mapping.get(region_id, f"ID {region_id}") if zone_mapping else f"ID {region_id}"
+        borough = borough_mapping.get(region_id, "") if borough_mapping else ""
+        if borough:
+            location_name = f"{zone} ({borough})"
+        else:
+            location_name = zone
     
     # Pivot the data
     pivot_data = weekly_data.pivot(index='day_of_week', columns='trip_length_category', values='total_profit')
@@ -205,7 +259,7 @@ def draw_profit_by_day_chart(region_data, region_id):
     sns.lineplot(data=pivot_data, ax=ax)
     
     # Set labels and title
-    ax.set_title(f'Day of Week Profit by Trip Length (Region {region_id})', fontsize=16)
+    ax.set_title(f'Day of Week Profit by Trip Length ({location_name})', fontsize=16)
     ax.set_xlabel('Day of Week', fontsize=14)
     ax.set_ylabel('Average Profit ($)', fontsize=14)
     
@@ -223,17 +277,45 @@ def draw_profit_by_day_chart(region_data, region_id):
     # Show the plot
     st.pyplot(fig)
 
-def draw_od_chart(region_data, region_id):
+def draw_od_chart(region_data, region_id, zone_mapping=None, borough_mapping=None):
     od_analysis = region_data['od_analysis']
+    
+    # Get location name
+    if 'get_location_name' in globals():
+        location_name = get_location_name(region_id)
+    else:
+        zone = zone_mapping.get(region_id, f"ID {region_id}") if zone_mapping else f"ID {region_id}"
+        borough = borough_mapping.get(region_id, "") if borough_mapping else ""
+        if borough:
+            location_name = f"{zone} ({borough})"
+        else:
+            location_name = zone
     
     # Sort by average profit
     top_destinations = od_analysis.sort_values('avg_profit', ascending=False).head(5)
     
+    # Get destination labels with zone names if available
+    dest_labels = []
+    for dest_id in top_destinations['destination']:
+        if zone_mapping:
+            dest_zone = zone_mapping.get(dest_id, f"ID {dest_id}")
+            dest_borough = borough_mapping.get(dest_id, "")
+            if dest_borough:
+                dest_labels.append(f"{dest_zone}\n({dest_borough})")
+            else:
+                dest_labels.append(dest_zone)
+        else:
+            dest_labels.append(f"ID {dest_id}")
+    
     # Create the plot
     fig, ax = plt.subplots(figsize=(10, 6))
     
-    # Plot the data
-    bars = sns.barplot(x='destination', y='avg_profit', data=top_destinations, ax=ax)
+    # Plot the data - we'll create a new Series with renamed index
+    bars = sns.barplot(x=range(len(top_destinations)), y='avg_profit', data=top_destinations, ax=ax)
+    
+    # Set x-axis labels to our custom labels
+    ax.set_xticks(range(len(dest_labels)))
+    ax.set_xticklabels(dest_labels, rotation=45, ha='right')
     
     # Add text annotations
     for i, row in enumerate(top_destinations.itertuples()):
@@ -241,8 +323,8 @@ def draw_od_chart(region_data, region_id):
                ha='center', color='white', fontweight='bold')
     
     # Set labels and title
-    ax.set_title(f'Top 5 Destinations from Region {region_id}', fontsize=16)
-    ax.set_xlabel('Destination Region ID', fontsize=14)
+    ax.set_title(f'Top 5 Destinations from {location_name}', fontsize=16)
+    ax.set_xlabel('Destination', fontsize=14)
     ax.set_ylabel('Average Profit ($)', fontsize=14)
     
     # Show the plot
@@ -254,7 +336,23 @@ def main():
         return
     
     # Load data and models
-    top_regions, all_results, models, region_data = load_data_and_models()
+    top_regions, all_results, models, region_data, zone_mapping, borough_mapping = load_data_and_models()
+    
+    # Create a format function for regions that will be used throughout the app
+    def format_region(region_id):
+        zone = zone_mapping.get(region_id, f"ID {region_id}")
+        borough = borough_mapping.get(region_id, "")
+        if borough:
+            return f"{zone} ({borough})"
+        return zone
+    
+    # Create a function to get location name
+    def get_location_name(region_id):
+        location_name = zone_mapping.get(region_id, f"ID {region_id}")
+        borough = borough_mapping.get(region_id, "")
+        if borough:
+            location_name = f"{location_name} ({borough})"
+        return location_name
     
     # App title and description
     st.title("🚕 CabBoost - Driver Recommendation System")
@@ -268,9 +366,9 @@ def main():
     
     # Region selection
     selected_region = st.sidebar.selectbox(
-        "Select your current region",
+        "Select your current location",
         options=top_regions,
-        format_func=lambda x: f"Region {x}"
+        format_func=format_region
     )
     
     # Get current time features
@@ -299,7 +397,7 @@ def main():
     region_result = region_data.get(selected_region)
     
     if region_result is None:
-        st.error(f"No data available for region {selected_region}")
+        st.error(f"No data available for {get_location_name(selected_region)}")
         return
     
     # Get recommendations
@@ -310,7 +408,10 @@ def main():
     
     # Tab 1: Recommendations
     with tab1:
-        st.header(f"Optimal Trip Recommendations for Region {selected_region}")
+        # Get location name
+        location_name = get_location_name(selected_region)
+            
+        st.header(f"Optimal Trip Recommendations for {location_name}")
         
         # Add real-time prediction using the model
         if selected_region in models and models[selected_region] is not None:
@@ -349,10 +450,13 @@ def main():
                 with col2:
                     use_custom_destination = st.checkbox("Custom Destination", False)
                     if use_custom_destination:
-                        destination = st.selectbox(
-                            "Destination Region", 
-                            options=list(set(region_result['od_analysis']['destination'].tolist())),
-                            format_func=lambda x: f"Region {x}"
+                        # Get list of destination regions
+                        dest_regions = list(set(region_result['od_analysis']['destination'].tolist()))
+                        # Format destination names
+                        dest_region_selected = st.selectbox(
+                            "Destination Location", 
+                            options=dest_regions,
+                            format_func=lambda x: format_region(x)
                         )
             
             # Update features with user selections
@@ -416,7 +520,7 @@ def main():
                                ha='center')
                 
                 # Set labels and title
-                ax.set_title(f'Predicted Profit by Trip Distance (Region {selected_region})', fontsize=16)
+                ax.set_title(f'Predicted Profit by Trip Distance ({location_name})', fontsize=16)
                 ax.set_xlabel('Distance (miles)', fontsize=14)
                 ax.set_ylabel('Predicted Profit ($)', fontsize=14)
                 ax.grid(True, alpha=0.3)
@@ -435,7 +539,7 @@ def main():
             else:
                 st.warning("Could not generate predictions. Try different parameters.")
         else:
-            st.warning("Model not available for this region. Only using historical analysis.")
+            st.warning(f"Model not available for {location_name}. Only using historical analysis.")
         
         st.markdown("---")
         
@@ -494,22 +598,28 @@ def main():
     
     # Tab 2: Profit Analysis
     with tab2:
-        st.header(f"Profit Analysis for Region {selected_region}")
+        # Get location name
+        location_name = get_location_name(selected_region)
+            
+        st.header(f"Profit Analysis for {location_name}")
         
         # Show hourly profit patterns
         st.subheader("Hourly Profit Patterns")
-        draw_profit_by_hour_chart(region_result, selected_region)
+        draw_profit_by_hour_chart(region_result, selected_region, zone_mapping, borough_mapping)
         
         # Show weekly profit patterns
         st.subheader("Day of Week Profit Patterns")
-        draw_profit_by_day_chart(region_result, selected_region)
+        draw_profit_by_day_chart(region_result, selected_region, zone_mapping, borough_mapping)
     
     # Tab 3: Destinations
     with tab3:
-        st.header(f"Best Destinations from Region {selected_region}")
+        # Get location name
+        location_name = get_location_name(selected_region)
+            
+        st.header(f"Best Destinations from {location_name}")
         
         # Show top destinations
-        draw_od_chart(region_result, selected_region)
+        draw_od_chart(region_result, selected_region, zone_mapping, borough_mapping)
         
         # List top destinations with details
         od_analysis = region_result['od_analysis']
@@ -519,8 +629,18 @@ def main():
             with st.container():
                 col1, col2, col3 = st.columns([1, 2, 1])
                 
+                # Get destination name
+                dest_id = row.destination
+                if zone_mapping:
+                    dest_name = zone_mapping.get(dest_id, f"ID {dest_id}")
+                    dest_borough = borough_mapping.get(dest_id, "")
+                    if dest_borough:
+                        dest_name = f"{dest_name} ({dest_borough})"
+                else:
+                    dest_name = f"ID {dest_id}"
+                
                 with col1:
-                    st.subheader(f"Destination {row.destination}")
+                    st.subheader(f"{dest_name}")
                 
                 with col2:
                     st.write(f"Average Distance: {row.avg_distance:.1f} miles")
@@ -537,7 +657,10 @@ def main():
     
     # Tab 4: Scenario Comparison
     with tab4:
-        st.header("Compare Different Scenarios")
+        # Get location name
+        location_name = get_location_name(selected_region)
+            
+        st.header(f"Compare Different Scenarios for {location_name}")
         st.markdown("""
         Use this tool to compare expected profit across different times, days, and other factors.
         The model will predict profitability based on the parameters you select.
@@ -690,7 +813,7 @@ def main():
                 # Total profit comparison
                 colors = ['#ff9999', '#66b3ff']
                 ax1.bar(comparison_df['name'], comparison_df['profit'], color=colors)
-                ax1.set_title('Total Profit Comparison', fontsize=14)
+                ax1.set_title(f'Total Profit Comparison ({location_name})', fontsize=14)
                 ax1.set_ylabel('Predicted Profit ($)', fontsize=12)
                 
                 # Add values on top of bars
@@ -699,7 +822,7 @@ def main():
                 
                 # Profit per mile comparison
                 ax2.bar(comparison_df['name'], comparison_df['profit_per_mile'], color=colors)
-                ax2.set_title('Profit per Mile Comparison', fontsize=14)
+                ax2.set_title(f'Profit per Mile Comparison ({location_name})', fontsize=14)
                 ax2.set_ylabel('Profit per Mile ($)', fontsize=12)
                 
                 # Add values on top of bars
@@ -765,7 +888,7 @@ def main():
                 else:
                     st.write("No significant differences between scenarios to highlight")
         else:
-            st.warning("Model not available for this region. Cannot generate predictions.")
+            st.warning(f"Model not available for {location_name}. Cannot generate predictions.")
 
     # Add info about the app
     st.sidebar.markdown("---")
@@ -775,7 +898,10 @@ def main():
         CabBoost analyzes taxi trip data to provide data-driven recommendations
         to maximize driver profitability based on location, time, and trip type.
         
-        This app is powered by machine learning models trained on NY taxi trip data.
+        This app uses actual NYC taxi zone names and boroughs to help you
+        identify the best pickup and dropoff locations.
+        
+        Powered by machine learning models trained on NY taxi trip data.
         """
     )
 
