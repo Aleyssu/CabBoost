@@ -1150,7 +1150,7 @@ def main():
     gc.collect()
     
     # Get top regions
-    top_regions = analyze_top_regions(df_processed, top_n=3)
+    top_regions = analyze_top_regions(df_processed, top_n=50)
     
     # Save top regions for app
     joblib.dump(top_regions, 'app_data/top_regions.joblib')
