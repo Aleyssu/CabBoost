@@ -172,3 +172,8 @@ cython_debug/
 
 /data
 /tripdata_combined.parquet
+/images
+/taxi_zones
+alex_rq1_model_logreg.pkl
+alex_rq1_model_knn.pkl
+alex_rq1_model_tree.pkl
