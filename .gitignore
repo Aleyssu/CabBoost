@@ -175,3 +175,4 @@ cython_debug/
 *.joblib
 *.png
 /taxi_zones
+*.pkl
