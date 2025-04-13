@@ -1,7 +1,9 @@
 numpy
-pandas 
-pyarrow 
-geopandas
+pandas
+pyarrow
 scikit-learn
-tabular
+matplotlib
 seaborn
+streamlit
+joblib
+geopandas
