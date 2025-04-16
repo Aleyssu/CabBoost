@@ -172,7 +172,8 @@ cython_debug/
 
 /data
 /tripdata_combined.parquet
-*.joblib
-*.png
+
+/yellow_tripdata
 /taxi_zones
+/images
 *.pkl
